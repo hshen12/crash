@@ -47,6 +47,22 @@ void short_cwd() {
     }
 }
 
+void clean_common(char *tokens[]) {
+    int i;
+
+    for(i = 0; i < 4095; i++) {
+        if(tokens[i] == ((char *) 0)) {
+            break;
+        }
+        if(strncmp(tokens[i], "#", 1) == 0) {
+            // printf("before is %s\n", tokens[i]);
+            tokens[i] = (char *) 0;
+            // break;
+        }
+    }
+
+}
+
 int main(void) {
     command_number = 0;
 
@@ -71,15 +87,11 @@ int main(void) {
 
         while(i < 4095 && token != NULL) {
             tokens[i++] = token;
-            // printf("token is %s\n", token);
             token = strtok(NULL, " \t\n");
         }
-        // if(i >= 16) {
-        //     perror("too many args");
-        //     break;
-        // }
-        // printf("i is %d\n", i);
         tokens[i] = (char *) 0;
+
+        clean_common(tokens);
 
         pid_t pid = fork();
         if(pid == 0) {
@@ -89,6 +101,7 @@ int main(void) {
         } else if (pid == -1) {
             perror("fork");
         } else {
+            //parent
             int status;
             wait(&status);
         }
