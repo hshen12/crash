@@ -55,9 +55,7 @@ void clean_common(char *tokens[]) {
             break;
         }
         if(strncmp(tokens[i], "#", 1) == 0) {
-            // printf("before is %s\n", tokens[i]);
             tokens[i] = (char *) 0;
-            // break;
         }
     }
 
@@ -96,14 +94,26 @@ int main(void) {
         pid_t pid = fork();
         if(pid == 0) {
             //child
-            execvp(tokens[0], tokens);
+
+						execvp(tokens[0], tokens);
             fclose(stdin);
         } else if (pid == -1) {
             perror("fork");
         } else {
             //parent
-            int status;
-            wait(&status);
+						if(strncmp(tokens[0], "cd", 2) == 0) {
+							char *homedir = getenv("HOME");
+							if(tokens[1] == NULL) {
+								chdir(homedir);
+								continue;
+							} else {
+								chdir(tokens[1]);
+								continue;
+							}
+						}
+						int status;
+						wait(&status);
+
         }
 
     }
