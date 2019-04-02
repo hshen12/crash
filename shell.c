@@ -16,8 +16,8 @@
 #include "tokenizer.h"
 
 int command_number;
-char username[10];
-char hostname[10];
+char username[LOGIN_NAME_MAX];
+char hostname[HOST_NAME_MAX];
 char cwd[PATH_MAX];
 int token_num;
 
@@ -98,6 +98,7 @@ void env_command(char *tokens[]) {
 }
 
 void sigint_handler(int signo) {
+	fflush(stdout);
 	// exit(0);
 }
 
@@ -107,8 +108,8 @@ int main(void) {
 
 	command_number = 0;
 
-	getlogin_r(username, 10);
-	gethostname(hostname, 50);
+	getlogin_r(username, LOGIN_NAME_MAX);
+	gethostname(hostname, HOST_NAME_MAX);
 	getcwd(cwd, PATH_MAX);
 	short_cwd();
 
@@ -121,7 +122,7 @@ int main(void) {
 		size_t line_sz = 0;
 
 		ssize_t sz = getline(&line, &line_sz, stdin);
-
+		add(line);
 		if(sz == EOF) {
 			break;
 		}
@@ -147,6 +148,9 @@ int main(void) {
 		}
 		if(strcmp(tokens[0], "setenv") == 0) {
 			env_command(tokens);
+		}
+		if(strcmp(tokens[0], "history") == 0) {
+			print_history();
 		}
 
 		pid_t pid = fork();

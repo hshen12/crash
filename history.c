@@ -1,9 +1,68 @@
 #include "history.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-void print_history() {
-    /* This function should print history entries */
-    printf("Not implemented yet.\n");
+struct list_node_s *h_p = NULL;
+struct list_node_s *t_p = NULL;
+int size = 0;
+
+void free_node(struct list_node_s* node_p) {
+  free(node_p->command);
+  free(node_p);
 }
 
+struct list_node_s* allocate_node(int size) {
+
+  struct list_node_s* newNode = (struct list_node_s*)malloc(sizeof(struct list_node_s));
+  newNode->index = size+1;
+  newNode->command = malloc((size+1)*sizeof(char));
+  newNode->next_p = NULL;
+  newNode->prev_p = NULL;
+  return newNode;
+}
+
+void limit_list() {
+  struct list_node_s* temp = t_p;
+  temp->prev_p->next_p = NULL;
+  t_p = temp->prev_p;
+  free_node(temp);
+}
+
+void add(char *command) {
+  if(h_p == t_p && h_p == NULL) {
+    struct list_node_s* newNode = allocate_node(strlen(command));
+    strcpy(newNode->command, command);
+    h_p = newNode;
+    t_p = newNode;
+    size++;
+    return;
+  } else {
+    //add to the front
+    struct list_node_s* newNode = allocate_node(strlen(command));
+    strcpy(newNode->command, command);
+    newNode->next_p = h_p;
+    h_p->prev_p = newNode;
+    h_p = newNode;
+    size++;
+    if(size > HIST_MAX) {
+      limit_list();
+    }
+    return;
+  }
+}
+
+
+void print_history() {
+  /* This function should print history entries */
+  struct list_node_s* curr_p = h_p;
+
+  printf("list = ");
+
+  while (curr_p != NULL) {
+    printf("%s ", curr_p->command);
+    curr_p = curr_p->next_p;
+  }
+  printf("\n");
+}
