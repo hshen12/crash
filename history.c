@@ -58,8 +58,6 @@ void print_history() {
   /* This function should print history entries */
   struct list_node_s* curr_p = h_p;
 
-  printf("list = ");
-
   while (curr_p != NULL) {
     printf("%s ", curr_p->command);
     curr_p = curr_p->next_p;
