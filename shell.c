@@ -130,9 +130,9 @@ int main(void) {
 		char *tokens[4096];
 		parse_line(line, tokens);
 
-		if(tokens[0] == NULL) {
-			continue;
-		}
+		// if(tokens[0] == NULL) {
+		// 	continue;
+		// }
 
 		clean_common(tokens);
 
@@ -151,6 +151,7 @@ int main(void) {
 		}
 		if(strcmp(tokens[0], "history") == 0) {
 			print_history();
+			continue;
 		}
 
 		pid_t pid = fork();

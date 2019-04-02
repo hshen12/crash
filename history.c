@@ -6,7 +6,7 @@
 
 struct list_node_s *h_p = NULL;
 struct list_node_s *t_p = NULL;
-int size = 0;
+int list_size = 0;
 
 void free_node(struct list_node_s* node_p) {
   free(node_p->command);
@@ -16,7 +16,7 @@ void free_node(struct list_node_s* node_p) {
 struct list_node_s* allocate_node(int size) {
 
   struct list_node_s* newNode = (struct list_node_s*)malloc(sizeof(struct list_node_s));
-  newNode->index = size+1;
+  newNode->index = list_size+1;
   newNode->command = malloc((size+1)*sizeof(char));
   newNode->next_p = NULL;
   newNode->prev_p = NULL;
@@ -27,6 +27,7 @@ void limit_list() {
   struct list_node_s* temp = t_p;
   temp->prev_p->next_p = NULL;
   t_p = temp->prev_p;
+  list_size--;
   free_node(temp);
 }
 
@@ -36,7 +37,7 @@ void add(char *command) {
     strcpy(newNode->command, command);
     h_p = newNode;
     t_p = newNode;
-    size++;
+    list_size++;
     return;
   } else {
     //add to the front
@@ -45,8 +46,8 @@ void add(char *command) {
     newNode->next_p = h_p;
     h_p->prev_p = newNode;
     h_p = newNode;
-    size++;
-    if(size > HIST_MAX) {
+    list_size++;
+    if(list_size > HIST_MAX) {
       limit_list();
     }
     return;
@@ -55,12 +56,11 @@ void add(char *command) {
 
 
 void print_history() {
-  /* This function should print history entries */
-  struct list_node_s* curr_p = h_p;
+  struct list_node_s* curr_p = t_p;
 
   while (curr_p != NULL) {
-    printf("%s ", curr_p->command);
-    curr_p = curr_p->next_p;
+    printf("%d %s ", curr_p->index, curr_p->command);
+    curr_p = curr_p->prev_p;
   }
   printf("\n");
 }
