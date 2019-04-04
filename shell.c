@@ -78,12 +78,12 @@ void parse_line(char *line, char *tokens[]) {
 }
 
 void cd_command(char *tokens[]) {
-		char *homedir = getenv("HOME");
-		if(tokens[1] == NULL){
-			chdir(homedir);
-		} else {
-			chdir(tokens[1]);
-		}
+	char *homedir = getenv("HOME");
+	if(tokens[1] == NULL){
+		chdir(homedir);
+	} else {
+		chdir(tokens[1]);
+	}
 }
 
 void exit_command(char *tokens[]) {
@@ -100,6 +100,29 @@ void env_command(char *tokens[]) {
 void sigint_handler(int signo) {
 	fflush(stdout);
 	// exit(0);
+}
+
+void history(char *line) {
+	char* command = malloc(sizeof(char));
+	if(line[1] > 47 && line[1] < 58) {
+		//is digit
+		find_digit(line+1, command);
+	}
+
+	if(line[1] > 96 && line[1] < 123) {
+		//is alpha
+		find_alpha(line+1, command);
+	}
+
+	if(line[1] == 33) {
+		find_last_command(command);
+	}
+
+	if(command != NULL) {
+		//if the command was found
+		strcpy(line, command);
+	}
+	free(command);
 }
 
 int main(void) {
@@ -122,17 +145,19 @@ int main(void) {
 		size_t line_sz = 0;
 
 		ssize_t sz = getline(&line, &line_sz, stdin);
+
+		//!num and !prefix
+		if(strncmp(line, "!", 1) == 0) {
+			history(line);
+		}
+
 		add(line);
 		if(sz == EOF) {
 			break;
 		}
-
+		
 		char *tokens[4096];
 		parse_line(line, tokens);
-
-		// if(tokens[0] == NULL) {
-		// 	continue;
-		// }
 
 		clean_common(tokens);
 
@@ -158,10 +183,11 @@ int main(void) {
 		if(pid == 0) {
 			//child
 			int ret = execvp(tokens[0], tokens);
+			fclose(stdin);
 			if(ret == -1) {
 				break;
 			}
-			fclose(stdin);
+			// fclose(stdin);
 		} else if (pid == -1) {
 			perror("fork");
 		} else {
@@ -170,7 +196,7 @@ int main(void) {
 			wait(&status);
 
 		}
-
+		free(line);
 	}
 
 	return 0;

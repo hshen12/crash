@@ -14,5 +14,8 @@ struct list_node_s {
 
 void add(char *command);
 void print_history();
+void find_digit(char *num_str, char* command);
+void find_alpha(char *prefix, char *command);
+void find_last_command(char *command);
 
 #endif

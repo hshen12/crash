@@ -16,7 +16,7 @@ void free_node(struct list_node_s* node_p) {
 struct list_node_s* allocate_node(int size) {
 
   struct list_node_s* newNode = (struct list_node_s*)malloc(sizeof(struct list_node_s));
-  newNode->index = list_size+1;
+  newNode->index = list_size;
   newNode->command = malloc((size+1)*sizeof(char));
   newNode->next_p = NULL;
   newNode->prev_p = NULL;
@@ -27,7 +27,6 @@ void limit_list() {
   struct list_node_s* temp = t_p;
   temp->prev_p->next_p = NULL;
   t_p = temp->prev_p;
-  list_size--;
   free_node(temp);
 }
 
@@ -54,12 +53,43 @@ void add(char *command) {
   }
 }
 
+void find_digit(char *num_str, char* command){
+  struct list_node_s* curr_p = h_p;
+  int num = atoi(num_str);
+  while(curr_p != NULL) {
+    if(curr_p->index == num) {
+      command = realloc(command, strlen(curr_p->command)*sizeof(char));
+      strcpy(command, curr_p->command);
+      return;
+    }
+    curr_p = curr_p->next_p;
+  }
+}
+
+void find_last_command(char *command) {
+  command = realloc(command, strlen(h_p->command)*sizeof(char));
+  strcpy(command, h_p->command);
+}
+
+
+void find_alpha(char *prefix, char *command){
+  struct list_node_s* curr_p = h_p;
+  while (curr_p != NULL) {
+    if(strncmp(curr_p->command, prefix, strlen(prefix)-1) == 0) {
+      command = realloc(command, strlen(curr_p->command)*sizeof(char));
+      strcpy(command, curr_p->command);
+      return;
+    }
+    curr_p = curr_p->next_p;
+  }
+}
+
 
 void print_history() {
   struct list_node_s* curr_p = t_p;
 
   while (curr_p != NULL) {
-    printf("%d %s ", curr_p->index, curr_p->command);
+    printf("%d %s", curr_p->index, curr_p->command);
     curr_p = curr_p->prev_p;
   }
   printf("\n");
