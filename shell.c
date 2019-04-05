@@ -14,13 +14,7 @@
 #include "history.h"
 #include "timer.h"
 #include "tokenizer.h"
-// #include "leetify.h"
-
-struct command_line {
-    char **tokens;
-    bool stdout_pipe;
-    char *stdout_file;
-};
+#include "leetify.h"
 
 int command_number;
 char username[LOGIN_NAME_MAX];
@@ -36,57 +30,6 @@ void print_prompt() {
 	fflush(stdout);
 }
 
-void print_cmd(struct command_line cmds) {
-  int i = 0;
-  // printf("print\n" );
-  while (cmds.tokens[i] != NULL) {
-    // printf("while\n" );
-    printf("%s ", cmds.tokens[i++]);
-  }
-  printf("done\n" );
-}
-
-
-void execute_pipeline(struct command_line *cmds) {
-    if (!cmds->stdout_pipe) {                   // no more commands
-        if (cmds->stdout_file != NULL) {
-            int fd = open(cmds->stdout_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-            if (fd == -1) {
-                perror("open file");
-            }
-            dup2(fd, STDOUT_FILENO);
-            close(fd);
-        }
-        if (execvp(cmds->tokens[0], cmds->tokens) == -1) {
-            perror("execvp");
-        }
-        return;
-    } else {
-        int fd[2];
-        if (pipe(fd) == -1) {
-            perror("pipe");
-            return;
-        }
-        pid_t pid = fork();
-        if (pid == -1) {
-            perror("fork");
-        } else if (pid == 0) {
-            /* Child */
-            dup2(fd[1], STDOUT_FILENO);
-            close(fd[0]);
-            if (execvp(cmds->tokens[0], cmds->tokens) == -1) {
-                perror("execvp");
-            }
-            close(fd[1]);
-        } else {
-            /* Parent */
-            dup2(fd[0], STDIN_FILENO);
-            close(fd[1]);
-            execute_pipeline(cmds + 1);
-            close(fd[0]);
-        }
-    }
-}
 
 /**
 * Modify the cwd to eliminate the user home directory
@@ -119,29 +62,79 @@ void clean_common(char *tokens[]) {
 			tokens[i] = (char *) 0;
 		}
 	}
-
 }
 
-void parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr) {
+bool parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr) {
 
 	char *next_tok = line;
 	char *curr_tok;
 	int i = 0;
-	int pipe_num = 0;
+  bool redirection = false;
 
 	while(i < 4095 && ((curr_tok = next_token(&next_tok, " \t\r\n")) != NULL)) {
-		if(strcmp(curr_tok, "|") == 0) {
-			(*pipe_ptr)++;
-			pipe_num++;
+    if(strncmp(curr_tok, "#", 1) == 0) {
+      tokens[i] = (char *) 0;
+    } else if(strcmp(curr_tok, "|") == 0) {
+      (*pipe_ptr)++;
 			tokens[i] = (char *) 0;
-		} else {
-			tokens[i] = curr_tok;
-		}
+    } else if(strcmp(curr_tok, ">") == 0) {
+      redirection = true;
+      // (*pipe_ptr)++;
+      tokens[i] = (char *) 0;
+    } else {
+      tokens[i] = curr_tok;
+    }
 		i++;
 	}
 
 	tokens[i] = (char *) 0;
 	(*token_ptr) = i;
+  return redirection;
+}
+
+void parse_piple(char *tokens[], int *token_num, struct command_line cmds[], bool output){
+  // printf("output is %s\n", tokens[*token_num-1]);
+  int i = -1;
+  int cmds_index = 0;
+
+  char *curr_tok = NULL;
+  if(output) {
+    while(i < (*token_num)) {
+      //not reach to the end
+      if(curr_tok == NULL) {
+        char **cmd_tokens = tokens+(i+1);
+        cmds[cmds_index].tokens = cmd_tokens;
+        cmds[cmds_index].stdout_pipe = true;
+        cmds[cmds_index].stdout_file = NULL;
+        cmds_index++;
+      }
+
+      i++;
+      curr_tok = tokens[i];
+    }
+
+    cmds[cmds_index-1].stdout_pipe = false;
+  } else {
+    printf("here\n" );
+    while(i < (*token_num)-2) {
+      printf("curr is %s\n", curr_tok);
+      //not reach to the end
+      if(curr_tok == NULL) {
+        char **cmd_tokens = tokens+(i+1);
+        cmds[cmds_index].tokens = cmd_tokens;
+        cmds[cmds_index].stdout_pipe = true;
+        cmds[cmds_index].stdout_file = NULL;
+        cmds_index++;
+      }
+
+      i++;
+      curr_tok = tokens[i];
+    }
+    cmds[cmds_index-1].stdout_pipe = false;
+    cmds[cmds_index-1].stdout_file = tokens[*token_num-1];
+  }
+
+
 }
 
 
@@ -215,46 +208,27 @@ int main(void) {
 
 		ssize_t sz = getline(&line, &line_sz, stdin);
 
-		//!num and !prefix
-		if(strncmp(line, "!", 1) == 0) {
-			history(line);
-		}
-
-		add(line);
 		if(sz == EOF) {
 			break;
 		}
 
+    add(line);
+
+    //!num and !prefix
+		if(strncmp(line, "!", 1) == 0) {
+			history(line);
+		}
+
 		char *tokens[4096];
+
 		int total_pipe = 0;
 		int token_num = 0;
 		int *pipe_ptr = &total_pipe;
 		int *token_ptr = &token_num;
 
-		parse_line(line, tokens, pipe_ptr, token_ptr);
-		clean_common(tokens);
-		struct command_line cmds[total_pipe	+1];
-
-		int i = -1;
-		int cmds_index = 0;
-
-		char *curr_tok = NULL;
-
-		while(i < token_num) {
-			//not reach to the end
-			if(curr_tok == NULL) {
-				char **cmd_tokens = tokens+(i+1);
-				cmds[cmds_index].tokens = cmd_tokens;
-				cmds[cmds_index].stdout_pipe = true;
-				cmds[cmds_index].stdout_file = NULL;
-				cmds_index++;
-			}
-
-			i++;
-			curr_tok = tokens[i];
-		}
-    
-		cmds[cmds_index-1].stdout_pipe = false;
+		bool output = parse_line(line, tokens, pipe_ptr, token_ptr);
+    struct command_line cmds[total_pipe	+1];
+    parse_piple(tokens, token_ptr, cmds, output);
 
 		if(tokens[0] == NULL) {
 			continue;

@@ -8,6 +8,5 @@ struct command_line {
 };
 
 void execute_pipeline(struct command_line *cmds);
-void print_cmd(struct command_line cmds);
 
 #endif
