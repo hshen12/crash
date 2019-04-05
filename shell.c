@@ -205,7 +205,7 @@ int main(void) {
 		ssize_t sz = getline(&line, &line_sz, stdin);
 		// printf("%s\n", line);
 
-		if(sz == EOF) {
+		if(sz == EOF || sz == 0) {
 			break;
 		}
 
@@ -255,7 +255,7 @@ int main(void) {
 		} else {
 			//parent
 			int status;
-			wait(&status);
+			waitpid(pid, &status, 0);
 		}
 		free(line);
 	}
