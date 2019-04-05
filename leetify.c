@@ -19,7 +19,7 @@ void execute_pipeline(struct command_line *cmds) {
             dup2(fd, STDOUT_FILENO);
             close(fd);
         }
-        printf("command is %s\n", cmds->tokens[0]);
+        // printf("command is %s\n", cmds->tokens[0]);
         if (execvp(cmds->tokens[0], cmds->tokens) == -1) {
             perror("execvp");
         }
@@ -37,7 +37,7 @@ void execute_pipeline(struct command_line *cmds) {
             /* Child */
             dup2(fd[1], STDOUT_FILENO);
             close(fd[0]);
-            printf("command is %s\n", cmds->tokens[0]);
+            // printf("command is %s\n", cmds->tokens[0]);
             if (execvp(cmds->tokens[0], cmds->tokens) == -1) {
                 perror("execvp");
             }

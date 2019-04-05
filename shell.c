@@ -20,13 +20,12 @@ int command_number;
 char username[LOGIN_NAME_MAX];
 char hostname[HOST_NAME_MAX];
 char cwd[PATH_MAX];
-// int token_num;
 
 /**
 * Print shell promt information
 */
 void print_prompt() {
-	printf("\n--[%d|%s@%s:~%s]--$ ", command_number, username, hostname, cwd);
+	printf("--[%d|%s@%s:~%s]--$ ", command_number, username, hostname, cwd);
 	fflush(stdout);
 }
 
@@ -69,72 +68,68 @@ bool parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr) {
 	char *next_tok = line;
 	char *curr_tok;
 	int i = 0;
-  bool redirection = false;
+	bool redirection = false;
 
 	while(i < 4095 && ((curr_tok = next_token(&next_tok, " \t\r\n")) != NULL)) {
-    if(strncmp(curr_tok, "#", 1) == 0) {
-      tokens[i] = (char *) 0;
-    } else if(strcmp(curr_tok, "|") == 0) {
-      (*pipe_ptr)++;
+		if(strncmp(curr_tok, "#", 1) == 0) {
 			tokens[i] = (char *) 0;
-    } else if(strcmp(curr_tok, ">") == 0) {
-      redirection = true;
-      // (*pipe_ptr)++;
-      tokens[i] = (char *) 0;
-    } else {
-      tokens[i] = curr_tok;
-    }
+			break;
+		} else if(strcmp(curr_tok, "|") == 0) {
+			(*pipe_ptr)++;
+			tokens[i] = (char *) 0;
+		} else if(strcmp(curr_tok, ">") == 0) {
+			redirection = true;
+			tokens[i] = (char *) 0;
+		} else {
+			tokens[i] = curr_tok;
+		}
 		i++;
 	}
 
 	tokens[i] = (char *) 0;
 	(*token_ptr) = i;
-  return redirection;
+	return redirection;
 }
 
 void parse_piple(char *tokens[], int *token_num, struct command_line cmds[], bool output){
-  // printf("output is %s\n", tokens[*token_num-1]);
-  int i = -1;
-  int cmds_index = 0;
+	int i = -1;
+	int cmds_index = 0;
 
-  char *curr_tok = NULL;
-  if(output) {
-    while(i < (*token_num)) {
-      //not reach to the end
-      if(curr_tok == NULL) {
-        char **cmd_tokens = tokens+(i+1);
-        cmds[cmds_index].tokens = cmd_tokens;
-        cmds[cmds_index].stdout_pipe = true;
-        cmds[cmds_index].stdout_file = NULL;
-        cmds_index++;
-      }
+	char *curr_tok = NULL;
+	if(!output) {
 
-      i++;
-      curr_tok = tokens[i];
-    }
+		while(i < (*token_num)) {
+			//not reach to the end
+			if(curr_tok == NULL) {
+				char **cmd_tokens = tokens+(i+1);
+				cmds[cmds_index].tokens = cmd_tokens;
+				cmds[cmds_index].stdout_pipe = true;
+				cmds[cmds_index].stdout_file = NULL;
+				cmds_index++;
+			}
 
-    cmds[cmds_index-1].stdout_pipe = false;
-  } else {
-    printf("here\n" );
-    while(i < (*token_num)-2) {
-      printf("curr is %s\n", curr_tok);
-      //not reach to the end
-      if(curr_tok == NULL) {
-        char **cmd_tokens = tokens+(i+1);
-        cmds[cmds_index].tokens = cmd_tokens;
-        cmds[cmds_index].stdout_pipe = true;
-        cmds[cmds_index].stdout_file = NULL;
-        cmds_index++;
-      }
+			i++;
+			curr_tok = tokens[i];
+		}
 
-      i++;
-      curr_tok = tokens[i];
-    }
-    cmds[cmds_index-1].stdout_pipe = false;
-    cmds[cmds_index-1].stdout_file = tokens[*token_num-1];
-  }
+		cmds[cmds_index-1].stdout_pipe = false;
+	} else {
+		while(i < (*token_num)-2) {
+		//not reach to the end
+			if(curr_tok == NULL) {
+				char **cmd_tokens = tokens+(i+1);
+				cmds[cmds_index].tokens = cmd_tokens;
+				cmds[cmds_index].stdout_pipe = true;
+				cmds[cmds_index].stdout_file = NULL;
+				cmds_index++;
+			}
 
-
+			i++;
+			curr_tok = tokens[i];
+		}
+		cmds[cmds_index-1].stdout_pipe = false;
+		cmds[cmds_index-1].stdout_file = tokens[*token_num-1];
+	}
 }
 
 
@@ -212,9 +207,9 @@ int main(void) {
 			break;
 		}
 
-    add(line);
+		add(line);
 
-    //!num and !prefix
+		//!num and !prefix
 		if(strncmp(line, "!", 1) == 0) {
 			history(line);
 		}
@@ -227,9 +222,11 @@ int main(void) {
 		int *token_ptr = &token_num;
 
 		bool output = parse_line(line, tokens, pipe_ptr, token_ptr);
-    struct command_line cmds[total_pipe	+1];
-    parse_piple(tokens, token_ptr, cmds, output);
+		struct command_line cmds[total_pipe	+1];
+		// printf("return is %d\n", output);
+		parse_piple(tokens, token_ptr, cmds, output);
 
+		// printf("0 command is %s\n", cmds[1].tokens[1]);
 		if(tokens[0] == NULL) {
 			continue;
 		}
