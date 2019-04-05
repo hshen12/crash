@@ -207,12 +207,12 @@ int main(void) {
 			break;
 		}
 
-		add(line);
-
 		//!num and !prefix
 		if(strncmp(line, "!", 1) == 0) {
 			history(line);
 		}
+
+		add(line);
 
 		char *tokens[4096];
 
