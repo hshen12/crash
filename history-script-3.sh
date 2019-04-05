@@ -422,8 +422,3 @@ echo Command 418
 echo Command 419
 echo -----
 !ls
-!p
-!cat
-!w
-!un
-!e
