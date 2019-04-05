@@ -92,6 +92,7 @@ bool parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr) {
 }
 
 void parse_piple(char *tokens[], int *token_num, struct command_line cmds[], bool output){
+
 	int i = -1;
 	int cmds_index = 0;
 
@@ -115,7 +116,7 @@ void parse_piple(char *tokens[], int *token_num, struct command_line cmds[], boo
 		cmds[cmds_index-1].stdout_pipe = false;
 	} else {
 		while(i < (*token_num)-2) {
-		//not reach to the end
+			//not reach to the end
 			if(curr_tok == NULL) {
 				char **cmd_tokens = tokens+(i+1);
 				cmds[cmds_index].tokens = cmd_tokens;
@@ -202,6 +203,7 @@ int main(void) {
 		size_t line_sz = 0;
 
 		ssize_t sz = getline(&line, &line_sz, stdin);
+		// printf("%s\n", line);
 
 		if(sz == EOF) {
 			break;
@@ -223,10 +225,8 @@ int main(void) {
 
 		bool output = parse_line(line, tokens, pipe_ptr, token_ptr);
 		struct command_line cmds[total_pipe	+1];
-		// printf("return is %d\n", output);
 		parse_piple(tokens, token_ptr, cmds, output);
 
-		// printf("0 command is %s\n", cmds[1].tokens[1]);
 		if(tokens[0] == NULL) {
 			continue;
 		}
