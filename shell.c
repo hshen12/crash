@@ -15,6 +15,7 @@
 #include "timer.h"
 #include "tokenizer.h"
 #include "leetify.h"
+#include "expansion.h"
 
 #define JOB_LIST_SIZE 10
 
@@ -32,17 +33,6 @@ char *line_list[JOB_LIST_SIZE];
 void print_prompt() {
 	printf("--[%d|%s@%s:~%s]--$ ", command_number, username, hostname, cwd);
 	fflush(stdout);
-}
-
-
-int string_ends_with(const char * str, const char * suffix)
-{
-	int str_len = strlen(str);
-	int suffix_len = strlen(suffix);
-
-	return 
-	(str_len >= suffix_len) &&
-	(0 == strcmp(str + (str_len-suffix_len), suffix));
 }
 
 
@@ -79,7 +69,7 @@ void clean_common(char *tokens[]) {
 	}
 }
 
-void parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr, bool *redirection, bool *background) {
+void parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr, bool *redirection, bool *background, int *ampersand) {
 
 	char *next_tok = line;
 	char *curr_tok;
@@ -98,16 +88,16 @@ void parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr, bool 
 		} else {
 			tokens[i] = curr_tok;
 		}
+		if(strncmp(curr_tok, "$", 1) == 0) {
+			*ampersand = i;
+		}
 		i++;
 	}
 
 	tokens[i] = (char *) 0;
 	(*token_ptr) = i;
-	// printf("str is |%s|\n", line);
 	if (i > 0 && strcmp(tokens[i-1], "&") == 0) {
-	// if(string_ends_with(line, "&")) {
 		*background = true;
-		// printf("str is %s\n", tokens[i-1]);
 		tokens[i-1] = (char *) 0;
 		
 		(*token_ptr) = i - 1;
@@ -236,14 +226,8 @@ void history(char *line) {
 void print_jobs() {
 	int i;
 
-	// printf("0 is %s\n", line_list[0]);
-
-	// printf("asasdfdsgsgds is %d\n", list_index);
-	// // printf("list is %d\n", list);
 	for(i = 0; i < list_index; i++) {
-	// 	printf("here\n");
-	// 	// printf("i is %d\n", i);
-		printf("%s\n", line_list[i]);
+		printf("%d %s\n", pid_list[i], line_list[i]);
 	}
 
 }
@@ -270,7 +254,14 @@ int main(void) {
 		size_t line_sz = 0;
 
 		ssize_t sz = getline(&line, &line_sz, stdin);
-		// char line_str[strlen(line)+1];
+
+		char *var = expand_var(line);
+		if(var != NULL) {
+			//has $
+			strcpy(line, var);
+			free(var);
+		}
+
 
 		if(sz == EOF || sz == 0) {
 			break;
@@ -289,23 +280,25 @@ int main(void) {
 		int token_num = 0;
 		bool output = false;
 		bool background = false;
+		int ampersand = -1;
 
 		char line_parse[strlen(line)];
 		strcpy(line_parse, line);
 
-		parse_line(line_parse, tokens, &total_pipe, &token_num, &output, &background);
-
-		struct command_line cmds[total_pipe	+1];
-		parse_piple(tokens, token_num, cmds, output);
+		parse_line(line_parse, tokens, &total_pipe, &token_num, &output, &background, &ampersand);
 
 		if(tokens[0] == NULL) {
 			continue;
 		}
 
+		struct command_line cmds[total_pipe	+1];
+		parse_piple(tokens, token_num, cmds, output);
+
 		if(strcmp(tokens[0], "jobs") == 0){
 			print_jobs();
 			continue;
 		}
+
 		if(strcmp(tokens[0], "exit") == 0) {
 			exit_command(tokens);
 		}
@@ -322,7 +315,6 @@ int main(void) {
 			continue;
 		}
 
-		// printf("bool is %d\n", background);
 		pid_t pid = fork();
 		if(pid == 0) {
 				//child
@@ -337,43 +329,12 @@ int main(void) {
 				waitpid(pid, &status, 0);
 			} else {
 				pid_list[list_index] = pid;
-					// printf("cmd is %s\n", cmds[0].tokens[0]);
-					// printf("cmd is %s\n", cmds[0].tokens[1]);
-					// printf("cmd is %s\n", cmds[0].tokens[3]);
 				char *line_str = malloc(strlen(line)*sizeof(char));
-				// printf("line is %s\n", line);
 				strncpy(line_str, line, strlen(line)-1);
-				printf("str is %s\n", line_str);
-				// printf("line str is %s\n", line_str);
 				line_list[list_index] = line_str;
-				printf("-------------------\n");
-				print_jobs();
-				printf("---------------\n");
-				// printf("list is %s, %d\n", line_str, list_index);
-				// printf("list is %s\n", line_list[1]);
-				// printf("list is %s\n", line_list[2]);
-				// printf("list is %s\n", line_list[3]);
 				list_index++;
 			}
 		}
-			// //background job
-			// pid_t pid = fork();
-			// if(pid == 0) {
-			// 	//child
-			// 	execute_pipeline(cmds);
-			// 	fclose(stdin);
-			// } else if (pid == -1) {
-			// 	perror("fork");
-			// } else {
-			// 	//parent
-			// 	pid_list[list_index] = pid;
-			// 	char line_str[strlen(line)];
-			// 	strcpy(line_str, line);
-			// 	line_list[list_index] = line_str;
-			// 	list_index++;
-			// 	// int status;
-			// 	// waitpid(pid, &status, 0);
-			// }
 		
 		free(line);
 	}
