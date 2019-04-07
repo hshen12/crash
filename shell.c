@@ -37,12 +37,12 @@ void print_prompt() {
 
 int string_ends_with(const char * str, const char * suffix)
 {
-  int str_len = strlen(str);
-  int suffix_len = strlen(suffix);
+	int str_len = strlen(str);
+	int suffix_len = strlen(suffix);
 
-  return 
-    (str_len >= suffix_len) &&
-    (0 == strcmp(str + (str_len-suffix_len), suffix));
+	return 
+	(str_len >= suffix_len) &&
+	(0 == strcmp(str + (str_len-suffix_len), suffix));
 }
 
 
@@ -186,6 +186,7 @@ void sigint_handler(int signo) {
 }
 
 void move(int index) {
+
 	for(; index < list_index; index++) {
 		pid_list[index] = pid_list[index+1];
 		line_list[index] = line_list[index+1];
@@ -195,19 +196,17 @@ void move(int index) {
 void sigchld_handler(int signo) {
 	int status;
 	pid_t child = waitpid(-1, &status, WNOHANG);
-	// while (child = waitpid(-1, &status, WNOHANG) != 0) {
 
-
-
-	int i = 0;
+	int i;
 	for(i = 0; i < list_index; i++) {
 		if(pid_list[i] == child) {
-			list_index--;
+			free(line_list[i]);
+			// list_index--;
 			move(i);
+			list_index--;
 			break;
 		}
-	// }
-}
+	}
 }
 
 void history(char *line) {
@@ -223,6 +222,7 @@ void history(char *line) {
 	}
 
 	if(line[1] == 33) {
+		//is !!
 		find_last_command(command);
 	}
 
@@ -233,9 +233,24 @@ void history(char *line) {
 	free(command);
 }
 
+void print_jobs() {
+	int i;
+
+	// printf("0 is %s\n", line_list[0]);
+
+	// printf("asasdfdsgsgds is %d\n", list_index);
+	// // printf("list is %d\n", list);
+	for(i = 0; i < list_index; i++) {
+	// 	printf("here\n");
+	// 	// printf("i is %d\n", i);
+		printf("%s\n", line_list[i]);
+	}
+
+}
+
 int main(void) {
 
-	// signal(SIGINT, sigint_handler);
+	signal(SIGINT, sigint_handler);
 	signal(SIGCHLD, sigchld_handler);
 
 	command_number = 0;
@@ -244,9 +259,9 @@ int main(void) {
 	gethostname(hostname, HOST_NAME_MAX);
 	getcwd(cwd, PATH_MAX);
 	short_cwd();
+	list_index = 0;
 
 	while(true) {
-		list_index = 0;
 		if (isatty(STDIN_FILENO)) {
 			print_prompt();
 		}
@@ -255,6 +270,7 @@ int main(void) {
 		size_t line_sz = 0;
 
 		ssize_t sz = getline(&line, &line_sz, stdin);
+		// char line_str[strlen(line)+1];
 
 		if(sz == EOF || sz == 0) {
 			break;
@@ -274,7 +290,11 @@ int main(void) {
 		bool output = false;
 		bool background = false;
 
-		parse_line(line, tokens, &total_pipe, &token_num, &output, &background);
+		char line_parse[strlen(line)];
+		strcpy(line_parse, line);
+
+		parse_line(line_parse, tokens, &total_pipe, &token_num, &output, &background);
+
 		struct command_line cmds[total_pipe	+1];
 		parse_piple(tokens, token_num, cmds, output);
 
@@ -282,14 +302,20 @@ int main(void) {
 			continue;
 		}
 
+		if(strcmp(tokens[0], "jobs") == 0){
+			print_jobs();
+			continue;
+		}
 		if(strcmp(tokens[0], "exit") == 0) {
 			exit_command(tokens);
 		}
 		if(strcmp(tokens[0], "cd") == 0) {
 			cd_command(tokens);
+			// continue;
 		}
 		if(strcmp(tokens[0], "setenv") == 0) {
 			env_command(tokens, &token_num);
+			// continue;
 		}
 		if(strcmp(tokens[0], "history") == 0) {
 			print_history();
@@ -297,29 +323,39 @@ int main(void) {
 		}
 
 		// printf("bool is %d\n", background);
-			pid_t pid = fork();
-			if(pid == 0) {
+		pid_t pid = fork();
+		if(pid == 0) {
 				//child
-				execute_pipeline(cmds);
-				fclose(stdin);
-			} else if (pid == -1) {
-				perror("fork");
-			} else {
+			execute_pipeline(cmds);
+			fclose(stdin);
+		} else if (pid == -1) {
+			perror("fork");
+		} else {
 				//parent
-				if(!background){
-					int status;
-					waitpid(pid, &status, 0);
-				} else {
-					pid_list[list_index] = pid;
+			if(!background){
+				int status;
+				waitpid(pid, &status, 0);
+			} else {
+				pid_list[list_index] = pid;
 					// printf("cmd is %s\n", cmds[0].tokens[0]);
 					// printf("cmd is %s\n", cmds[0].tokens[1]);
 					// printf("cmd is %s\n", cmds[0].tokens[3]);
-					char line_str[strlen(line) + 1];
-					strcpy(line_str, line);
-					line_list[list_index] = line_str;
-					list_index++;
-				}
+				char *line_str = malloc(strlen(line)*sizeof(char));
+				// printf("line is %s\n", line);
+				strncpy(line_str, line, strlen(line)-1);
+				printf("str is %s\n", line_str);
+				// printf("line str is %s\n", line_str);
+				line_list[list_index] = line_str;
+				printf("-------------------\n");
+				print_jobs();
+				printf("---------------\n");
+				// printf("list is %s, %d\n", line_str, list_index);
+				// printf("list is %s\n", line_list[1]);
+				// printf("list is %s\n", line_list[2]);
+				// printf("list is %s\n", line_list[3]);
+				list_index++;
 			}
+		}
 			// //background job
 			// pid_t pid = fork();
 			// if(pid == 0) {
