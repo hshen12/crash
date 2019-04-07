@@ -244,6 +244,7 @@ int main(void) {
 	getcwd(cwd, PATH_MAX);
 	short_cwd();
 	list_index = 0;
+	char *line_str;
 
 	while(true) {
 		if (isatty(STDIN_FILENO)) {
@@ -329,7 +330,7 @@ int main(void) {
 				waitpid(pid, &status, 0);
 			} else {
 				pid_list[list_index] = pid;
-				char *line_str = malloc(strlen(line)*sizeof(char));
+				line_str = malloc(strlen(line)*sizeof(char));
 				strncpy(line_str, line, strlen(line)-1);
 				line_list[list_index] = line_str;
 				list_index++;
