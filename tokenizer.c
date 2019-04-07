@@ -21,8 +21,26 @@ char *next_token(char **str_ptr, const char *delim)
         return NULL;
     }
 
+    char quotes[] = "\'\"";
     size_t tok_start = strspn(*str_ptr, delim);
     size_t tok_end = strcspn(*str_ptr + tok_start, delim);
+    size_t quote_start = strcspn(*str_ptr, quotes);
+    size_t offset;
+    size_t quote_end;
+
+    if (quote_start < tok_end){
+        quotes[0] = *(*str_ptr + quote_start);
+        quotes[1] = '\0';
+        offset = quote_start + 1;
+        quote_end = strcspn(*str_ptr + offset, quotes) + offset;
+        tok_end = strcspn(*str_ptr + quote_end, delim) + quote_end - tok_start;
+    }
+    // # Remove the opposite type of quote
+    // quotes[0] = *(*sp + quote_start)
+    // quotes[1] = '\0';
+    // offset = quote_start + 1;
+    // quote_end = strcspn(*sp + offset, quotes) + offset;
+    // tok_end = strcspn(*sp + quote_end, delims) + quote_end - tok_start;
 
     /* Zero length token. We must be finished. */
     if (tok_end  <= 0) {

@@ -257,12 +257,14 @@ int main(void) {
 		ssize_t sz = getline(&line, &line_sz, stdin);
 
 		char *var = expand_var(line);
+		// printf("var is %s\n", var);
+		// printf("size is %ld\n", strlen(var));
+		// printf("var is %s\n", var);
 		if(var != NULL) {
 			//has $
-			strcpy(line, var);
-			free(var);
+			strcpy(line, var);	
 		}
-
+		free(var);
 
 		if(sz == EOF || sz == 0) {
 			break;
@@ -301,7 +303,13 @@ int main(void) {
 		}
 
 		if(strcmp(tokens[0], "exit") == 0) {
+			free(line);
+			free_list();
 			exit_command(tokens);
+		}
+		if(strcmp(tokens[0], "clean") == 0) {
+			free_list();
+			continue;
 		}
 		if(strcmp(tokens[0], "cd") == 0) {
 			cd_command(tokens);
@@ -330,8 +338,9 @@ int main(void) {
 				waitpid(pid, &status, 0);
 			} else {
 				pid_list[list_index] = pid;
+				line[strlen(line)-1] = '\0';
 				line_str = malloc(strlen(line)*sizeof(char));
-				strncpy(line_str, line, strlen(line)-1);
+				strcpy(line_str, line);
 				line_list[list_index] = line_str;
 				list_index++;
 			}
@@ -339,6 +348,7 @@ int main(void) {
 		
 		free(line);
 	}
+	free_list();
 
 	return 0;
 }

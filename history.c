@@ -33,6 +33,7 @@ void limit_list() {
 void add(char *command) {
   if(h_p == t_p && h_p == NULL) {
     struct list_node_s* newNode = allocate_node(strlen(command));
+    // printf("size is %ld\n", sizeof(newNode));
     strcpy(newNode->command, command);
     h_p = newNode;
     t_p = newNode;
@@ -93,4 +94,23 @@ void print_history() {
     curr_p = curr_p->prev_p;
   }
   printf("\n");
+}
+
+void free_list() {
+
+  struct list_node_s* node_p = h_p;
+  h_p = NULL;
+  t_p = NULL;
+
+  while(node_p != NULL){
+    struct list_node_s* tmp = node_p;
+
+    node_p = node_p->next_p;
+
+    if(tmp->next_p != NULL)
+      tmp->next_p->prev_p = tmp->prev_p;
+    tmp->next_p = NULL;
+    free_node(tmp);
+  }
+
 }
