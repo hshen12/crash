@@ -26,6 +26,7 @@ char cwd[PATH_MAX];
 pid_t pid_list[JOB_LIST_SIZE];
 int list_index;
 char *line_list[JOB_LIST_SIZE];
+bool command_execution;
 
 /**
 * Print shell promt information
@@ -56,26 +57,23 @@ void short_cwd() {
 	}
 }
 
-void clean_common(char *tokens[]) {
-	int i;
-
-	for(i = 0; i < 4095; i++) {
-		if(tokens[i] == ((char *) 0)) {
-			break;
-		}
-		if(strncmp(tokens[i], "#", 1) == 0) {
-			tokens[i] = (char *) 0;
-		}
-	}
-}
-
+/**
+ * Parse the command line into array of strings
+ * @param line        line of command
+ * @param tokens      string array
+ * @param pipe_ptr    num of pipe
+ * @param token_ptr   num of strings in array
+ * @param redirection boolean, whether need redirection or not 
+ * @param background  boolean, whether need background job or not
+ * @param ampersand   index of the '&'
+ */
 void parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr, bool *redirection, bool *background, int *ampersand) {
 
 	char *next_tok = line;
 	char *curr_tok;
 	int i = 0;
 
-	while(i < 4095 && ((curr_tok = next_token(&next_tok, " \t\r\n")) != NULL)) {
+	while(i < 4095 && ((curr_tok = next_token(&next_tok, " \t\r\n\"\'")) != NULL)) {
 		if(strncmp(curr_tok, "#", 1) == 0) {
 			tokens[i] = (char *) 0;
 			break;
@@ -106,6 +104,13 @@ void parse_line(char *line, char *tokens[], int *pipe_ptr, int *token_ptr, bool 
 
 }
 
+/**
+ * Parse the pipe in the command
+ * @param tokens    string array
+ * @param token_num total number of string
+ * @param cmds      struct commands
+ * @param output    boolean indicate whether need output or not
+ */
 void parse_piple(char *tokens[], int token_num, struct command_line cmds[], bool output){
 
 	int i = -1;
@@ -113,7 +118,7 @@ void parse_piple(char *tokens[], int token_num, struct command_line cmds[], bool
 
 	char *curr_tok = NULL;
 	if(!output) {
-
+		//if no output
 		while(i < token_num) {
 			//not reach to the end
 			if(curr_tok == NULL) {
@@ -130,6 +135,7 @@ void parse_piple(char *tokens[], int token_num, struct command_line cmds[], bool
 
 		cmds[cmds_index-1].stdout_pipe = false;
 	} else {
+		//if output needed
 		while(i < (token_num-2)) {
 			//not reach to the end
 			if(curr_tok == NULL) {
@@ -143,12 +149,18 @@ void parse_piple(char *tokens[], int token_num, struct command_line cmds[], bool
 			i++;
 			curr_tok = tokens[i];
 		}
+		//change the last struct boolean to false
+		//no more command behand
+		//give the output file name to the last struct
 		cmds[cmds_index-1].stdout_pipe = false;
 		cmds[cmds_index-1].stdout_file = tokens[token_num-1];
 	}
 }
 
-
+/**
+ * Handling cd command
+ * @param tokens String array
+ */
 void cd_command(char *tokens[]) {
 	char *homedir = getenv("HOME");
 	if(tokens[1] == NULL){
@@ -158,10 +170,11 @@ void cd_command(char *tokens[]) {
 	}
 }
 
-void exit_command(char *tokens[]) {
-	exit(0);
-}
-
+/**
+ * Set envirment variable
+ * @param tokens    string array after tokenization
+ * @param token_ptr total number of tokens in the array
+ */
 void env_command(char *tokens[], int *token_ptr) {
 
 	if(*token_ptr == 3) {
@@ -169,12 +182,26 @@ void env_command(char *tokens[], int *token_ptr) {
 	}
 }
 
+/**
+ * Handling sigint
+ * @param signo 
+ */
 void sigint_handler(int signo) {
 
-	fflush(stdout);
+	if(isatty(STDIN_FILENO)) {
+		printf("\n");
+		fflush(stdout);
+		if(!command_execution) {
+			print_prompt();
+		}
+	}
 	// exit(0);
 }
 
+/**
+ * When a background job filished, move the behand job forword
+ * @param index the finished job index in the array
+ */
 void move(int index) {
 
 	for(; index < list_index; index++) {
@@ -183,6 +210,10 @@ void move(int index) {
 	}
 }
 
+/**
+ * Handling sgichild signal
+ * @param signo 
+ */
 void sigchld_handler(int signo) {
 	int status;
 	pid_t child = waitpid(-1, &status, WNOHANG);
@@ -191,7 +222,6 @@ void sigchld_handler(int signo) {
 	for(i = 0; i < list_index; i++) {
 		if(pid_list[i] == child) {
 			free(line_list[i]);
-			// list_index--;
 			move(i);
 			list_index--;
 			break;
@@ -199,6 +229,10 @@ void sigchld_handler(int signo) {
 	}
 }
 
+/**
+ * Base on the given command, run different history command
+ * @param line string array of commands
+ */
 void history(char *line) {
 	char* command = malloc(sizeof(char));
 	if(line[1] > 47 && line[1] < 58) {
@@ -223,6 +257,9 @@ void history(char *line) {
 	free(command);
 }
 
+/**
+ * Print out background jobs list
+ */
 void print_jobs() {
 	int i;
 
@@ -245,8 +282,9 @@ int main(void) {
 	short_cwd();
 	list_index = 0;
 	char *line_str;
-
+	command_execution = true;
 	while(true) {
+		command_execution = false;
 		if (isatty(STDIN_FILENO)) {
 			print_prompt();
 		}
@@ -257,16 +295,15 @@ int main(void) {
 		ssize_t sz = getline(&line, &line_sz, stdin);
 
 		char *var = expand_var(line);
-		// printf("var is %s\n", var);
-		// printf("size is %ld\n", strlen(var));
-		// printf("var is %s\n", var);
+
 		if(var != NULL) {
 			//has $
-			strcpy(line, var);	
+			strcpy(line, var);
+			free(var);
 		}
-		free(var);
 
 		if(sz == EOF || sz == 0) {
+			free(line);
 			break;
 		}
 
@@ -276,6 +313,7 @@ int main(void) {
 		}
 
 		add(line);
+		command_number++;
 
 		char *tokens[4096];
 
@@ -291,6 +329,7 @@ int main(void) {
 		parse_line(line_parse, tokens, &total_pipe, &token_num, &output, &background, &ampersand);
 
 		if(tokens[0] == NULL) {
+			free(line);
 			continue;
 		}
 
@@ -299,40 +338,47 @@ int main(void) {
 
 		if(strcmp(tokens[0], "jobs") == 0){
 			print_jobs();
+			free(line);
 			continue;
 		}
 
 		if(strcmp(tokens[0], "exit") == 0) {
 			free(line);
 			free_list();
-			exit_command(tokens);
+			exit(0);
 		}
 		if(strcmp(tokens[0], "clean") == 0) {
+			free(line);
 			free_list();
 			continue;
 		}
 		if(strcmp(tokens[0], "cd") == 0) {
 			cd_command(tokens);
-			// continue;
+			free(line);
+			continue;
 		}
 		if(strcmp(tokens[0], "setenv") == 0) {
 			env_command(tokens, &token_num);
-			// continue;
+			free(line);
+			continue;
 		}
 		if(strcmp(tokens[0], "history") == 0) {
 			print_history();
+			free(line);
 			continue;
 		}
 
+		command_execution = true;
+		//fork and execute
 		pid_t pid = fork();
 		if(pid == 0) {
-				//child
+			//child
 			execute_pipeline(cmds);
 			fclose(stdin);
 		} else if (pid == -1) {
 			perror("fork");
 		} else {
-				//parent
+			//parent
 			if(!background){
 				int status;
 				waitpid(pid, &status, 0);

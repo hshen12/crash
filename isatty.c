@@ -1,11 +1,8 @@
 /**
- * isatty.c
  *
  * Determines whether or not stdin is connected to a terminal or if data has
  * been piped in.
  *
- * Compile: gcc -g -Wall isatty.c -o isatty
- * Run: ./isatty
  */
 #include <stdio.h>
 #include <unistd.h>
