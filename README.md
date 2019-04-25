@@ -6,8 +6,8 @@ partial functionality.
 ## Prerequisites
 The user mush has cc or gcc installed.
 
-##To compile
+## To compile
 make
 
-##To run
+## To run
 ./crash
