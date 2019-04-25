@@ -1,7 +1,13 @@
-# Project 2: Command Line Shell
+Command Line Shell
 
-the main goal for this project is to develop shell has similliar fucntion than terminal. 
+Crash is a shell project which has similiar functionality than terminal. It has developed
+partial functionality.
 
-during the process, we have learned the ineternal logic for a terminal.
+## Prerequisites
+The user mush has cc or gcc installed.
 
-See: https://www.cs.usfca.edu/~mmalensek/cs326/assignments/project-2.html for detail
+##To compile
+make
+
+##To run
+./crash
