@@ -93,7 +93,6 @@ void print_history() {
     printf("%d %s", curr_p->index, curr_p->command);
     curr_p = curr_p->prev_p;
   }
-  printf("\n");
 }
 
 void free_list() {

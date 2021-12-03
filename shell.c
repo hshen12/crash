@@ -32,7 +32,7 @@ bool command_execution;
 * Print shell promt information
 */
 void print_prompt() {
-	printf("--[%d|%s@%s:~%s]--$ ", command_number, username, hostname, cwd);
+	printf("--[%d|%s@%s:%s]--$ ", command_number, username, hostname, cwd);
 	fflush(stdout);
 }
 
@@ -45,13 +45,19 @@ void short_cwd() {
 	int i;
 	char*p;
 
+	if(strcmp(cwd, getenv("HOME")) == 0) {
+		strcpy(cwd, "~");
+		return;
+	}
+
 	for(i = 0; i < strlen(cwd); i++) {
 		if(cwd[i] == '/') {
 			count++;
 		}
 		if(count == 3) {
 			p = cwd+i;
-			strcpy(cwd, p);
+			strcpy(cwd, "~");
+			strcpy(cwd+1, p);
 			break;
 		}
 	}
@@ -312,7 +318,6 @@ int main(void) {
 			history(line);
 		}
 
-		add(line);
 		command_number++;
 
 		char *tokens[4096];
@@ -330,9 +335,11 @@ int main(void) {
 
 		if(tokens[0] == NULL) {
 			free(line);
+			command_number--;
 			continue;
 		}
 
+		add(line);
 		struct command_line cmds[total_pipe	+1];
 		parse_piple(tokens, token_num, cmds, output);
 
@@ -355,6 +362,8 @@ int main(void) {
 		if(strcmp(tokens[0], "cd") == 0) {
 			cd_command(tokens);
 			free(line);
+			getcwd(cwd, PATH_MAX);
+			short_cwd();
 			continue;
 		}
 		if(strcmp(tokens[0], "setenv") == 0) {
